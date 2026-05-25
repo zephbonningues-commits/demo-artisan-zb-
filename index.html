@@ -260,3 +260,10 @@
             const messageDiv = document.getElementById(id);
             if (messageDiv) {
                 messageDiv.innerText = newText;
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>
