@@ -6,7 +6,7 @@
     <title>Démo Chatbot Artisan</title>
     <style>
         :root {
-            --primary-color: #1e3a8a; /* Bleu pro / confiance */
+            --primary-color: #1e3a8a;
             --secondary-color: #f3f4f6;
             --text-color: #1f2937;
             --bot-msg-color: #e5e7eb;
@@ -20,7 +20,6 @@
             padding: 0;
         }
 
-        /* Bulle de discussion (Bouton flottant) */
         #chat-button {
             position: fixed;
             bottom: 20px;
@@ -48,7 +47,6 @@
             fill: white;
         }
 
-        /* Fenêtre de Chat */
         #chat-window {
             position: fixed;
             bottom: 90px;
@@ -59,13 +57,12 @@
             background-color: white;
             border-radius: 12px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            display: none; /* Caché par défaut */
+            display: none;
             flex-direction: column;
             overflow: hidden;
             z-index: 1000;
         }
 
-        /* En-tête du chat */
         .chat-header {
             background-color: var(--primary-color);
             color: white;
@@ -82,7 +79,6 @@
             opacity: 0.8;
         }
 
-        /* Zone des messages */
         .chat-messages {
             flex: 1;
             padding: 15px;
@@ -98,6 +94,7 @@
             border-radius: 8px;
             font-size: 0.95rem;
             line-height: 1.4;
+            white-space: pre-line;
         }
 
         .message.bot {
@@ -112,7 +109,6 @@
             align-self: flex-end;
         }
 
-        /* Zone d'envoi */
         .chat-input-area {
             border-top: 1px solid #e5e7eb;
             padding: 10px;
@@ -180,10 +176,8 @@
     </div>
 
     <script>
-        // URL Production Webhook de ton n8n sur Railway
         const N8N_WEBHOOK_URL = "https://main-production-3d1a.up.railway.app/webhook/chat-artisan";
 
-        // Ouvrir / Fermer le chat
         function toggleChat() {
             const chatWindow = document.getElementById('chat-window');
             if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
@@ -193,29 +187,28 @@
             }
         }
 
-        // Gérer la touche Entrée
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 sendMessage();
             }
         }
 
-        // Envoyer le message
         async function sendMessage() {
             const inputElement = document.getElementById('user-input');
             const messageText = inputElement.value.trim();
             
             if (messageText === "") return;
 
-            // 1. Afficher le message de l'utilisateur dans l'interface
-            appendMessage(messageText, 'user');
-            inputElement.value = ""; // Vider le champ
+            // 1. Affiche le message de l'utilisateur avec un ID unique strict
+            const userMsgId = 'user-' + Date.now();
+            appendMessage(messageText, 'user', userMsgId);
+            inputElement.value = "";
 
-            // 2. Afficher un message de chargement temporaire pour le Bot
-            const loadingId = appendMessage("En train de réfléchir...", 'bot');
+            // 2. Affiche la bulle d'attente avec son propre ID unique strict
+            const botMsgId = 'bot-' + Date.now();
+            appendMessage("En train de réfléchir...", 'bot', botMsgId);
 
             try {
-                // 3. Envoyer la requête à n8n
                 const response = await fetch(N8N_WEBHOOK_URL, {
                     method: 'POST',
                     headers: {
@@ -228,34 +221,35 @@
                     throw new Error("Erreur réseau");
                 }
 
-                const data = await response.json();
+                let data = await response.json();
                 
-                // 4. Remplacer le texte de chargement par la vraie réponse de n8n
-                updateBotMessage(loadingId, data.response || "Désolé, je n'ai pas compris la réponse.");
+                // Extraction propre du texte pour nettoyer d'éventuels résidus ou signes "="
+                let rawReply = data.response || data.output || "Désolé, je n'ai pas pu générer de réponse.";
+                if (typeof rawReply === 'string') {
+                    rawReply = rawReply.replace(/^=\s*/, ''); // Supprime le "=" ou "= " en début de chaîne
+                }
+
+                // 3. Met à jour uniquement la bulle du bot
+                updateBotMessage(botMsgId, rawReply);
 
             } catch (error) {
                 console.error("Erreur:", error);
-                updateBotMessage(loadingId, "Oups ! Une erreur est survenue lors de la connexion avec le serveur.");
+                updateBotMessage(botMsgId, "Oups ! Une erreur est survenue lors de la connexion avec le serveur.");
             }
         }
 
-        // Ajouter un bloc message dans la zone de chat
-        function appendMessage(text, sender) {
+        function appendMessage(text, sender, uniqueId) {
             const chatMessages = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
-            const uniqueId = 'msg-' + Date.now();
             
             messageDiv.className = `message ${sender}`;
             messageDiv.id = uniqueId;
             messageDiv.innerText = text;
             
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll automatique vers le bas
-            
-            return uniqueId;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Mettre à jour un message existant (pour enlever le "En train de réfléchir...")
         function updateBotMessage(id, newText) {
             const messageDiv = document.getElementById(id);
             if (messageDiv) {
