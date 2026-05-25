@@ -146,7 +146,7 @@
     </style>
 </head>
 <body>
-const N8N_WEBHOOK_URL = "https://main-production-3d1a.up.railway.app/webhook/chat-artisan";
+
     <div style="padding: 20px; text-align: center;">
         <h1>Page de Démo Artisan</h1>
         <p>Le chatbot est disponible en bas à droite de l'écran.</p>
@@ -180,8 +180,8 @@ const N8N_WEBHOOK_URL = "https://main-production-3d1a.up.railway.app/webhook/cha
     </div>
 
     <script>
-        // Remplace par l'URL "Production Webhook" fournie par n8n une fois ton workflow actif
-        const N8N_WEBHOOK_URL = "https://TON-SUBDOMAIN.railway.app/webhook/ton-endpoint";
+        // URL Production Webhook de ton n8n sur Railway
+        const N8N_WEBHOOK_URL = "https://main-production-3d1a.up.railway.app/webhook/chat-artisan";
 
         // Ouvrir / Fermer le chat
         function toggleChat() {
@@ -231,7 +231,6 @@ const N8N_WEBHOOK_URL = "https://main-production-3d1a.up.railway.app/webhook/cha
                 const data = await response.json();
                 
                 // 4. Remplacer le texte de chargement par la vraie réponse de n8n
-                // On suppose ici que ton n8n renvoie un JSON sous la forme : { "response": "Texte de l'IA" }
                 updateBotMessage(loadingId, data.response || "Désolé, je n'ai pas compris la réponse.");
 
             } catch (error) {
@@ -261,10 +260,3 @@ const N8N_WEBHOOK_URL = "https://main-production-3d1a.up.railway.app/webhook/cha
             const messageDiv = document.getElementById(id);
             if (messageDiv) {
                 messageDiv.innerText = newText;
-                const chatMessages = document.getElementById('chat-messages');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        }
-    </script>
-</body>
-</html>
