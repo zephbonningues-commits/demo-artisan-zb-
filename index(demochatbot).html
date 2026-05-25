@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Démo Chatbot Artisan</title>
+    <style>
+        :root {
+            --primary-color: #1e3a8a; /* Bleu pro / confiance */
+            --secondary-color: #f3f4f6;
+            --text-color: #1f2937;
+            --bot-msg-color: #e5e7eb;
+            --user-msg-color: #2563eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Bulle de discussion (Bouton flottant) */
+        #chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        #chat-button:hover {
+            transform: scale(1.05);
+        }
+
+        #chat-button svg {
+            width: 28px;
+            height: 28px;
+            fill: white;
+        }
+
+        /* Fenêtre de Chat */
+        #chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 380px;
+            max-width: 90%;
+            height: 500px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            display: none; /* Caché par défaut */
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        /* En-tête du chat */
+        .chat-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header .status {
+            font-size: 0.8rem;
+            font-weight: normal;
+            opacity: 0.8;
+        }
+
+        /* Zone des messages */
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .message.bot {
+            background-color: var(--bot-msg-color);
+            color: var(--text-color);
+            align-self: flex-start;
+        }
+
+        .message.user {
+            background-color: var(--user-msg-color);
+            color: white;
+            align-self: flex-end;
+        }
+
+        /* Zone d'envoi */
+        .chat-input-area {
+            border-top: 1px solid #e5e7eb;
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            background-color: white;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .chat-input-area button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .chat-input-area button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+    <div style="padding: 20px; text-align: center;">
+        <h1>Page de Démo Artisan</h1>
+        <p>Le chatbot est disponible en bas à droite de l'écran.</p>
+    </div>
+
+    <div id="chat-button" onclick="toggleChat()">
+        <svg viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+        </svg>
+    </div>
+
+    <div id="chat-window">
+        <div class="chat-header">
+            <div>
+                <div>Mon Artisan Assistant IA</div>
+                <div class="status">🟢 En ligne - Répond instantanément</div>
+            </div>
+            <span style="cursor:pointer; font-size: 1.2rem;" onclick="toggleChat()">✕</span>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot">
+                Bonjour ! Je suis l'assistant virtuel de l'entreprise. Comment puis-je vous aider aujourd'hui ? (Devis, urgence, horaires...)
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Écrivez votre message ici..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Envoyer</button>
+        </div>
+    </div>
+
+    <script>
+        // Remplace par l'URL "Production Webhook" fournie par n8n une fois ton workflow actif
+        const N8N_WEBHOOK_URL = "https://TON-SUBDOMAIN.railway.app/webhook/ton-endpoint";
+
+        // Ouvrir / Fermer le chat
+        function toggleChat() {
+            const chatWindow = document.getElementById('chat-window');
+            if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
+                chatWindow.style.display = 'flex';
+            } else {
+                chatWindow.style.display = 'none';
+            }
+        }
+
+        // Gérer la touche Entrée
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Envoyer le message
+        async function sendMessage() {
+            const inputElement = document.getElementById('user-input');
+            const messageText = inputElement.value.trim();
+            
+            if (messageText === "") return;
+
+            // 1. Afficher le message de l'utilisateur dans l'interface
+            appendMessage(messageText, 'user');
+            inputElement.value = ""; // Vider le champ
+
+            // 2. Afficher un message de chargement temporaire pour le Bot
+            const loadingId = appendMessage("En train de réfléchir...", 'bot');
+
+            try {
+                // 3. Envoyer la requête à n8n
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: messageText })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Erreur réseau");
+                }
+
+                const data = await response.json();
+                
+                // 4. Remplacer le texte de chargement par la vraie réponse de n8n
+                // On suppose ici que ton n8n renvoie un JSON sous la forme : { "response": "Texte de l'IA" }
+                updateBotMessage(loadingId, data.response || "Désolé, je n'ai pas compris la réponse.");
+
+            } catch (error) {
+                console.error("Erreur:", error);
+                updateBotMessage(loadingId, "Oups ! Une erreur est survenue lors de la connexion avec le serveur.");
+            }
+        }
+
+        // Ajouter un bloc message dans la zone de chat
+        function appendMessage(text, sender) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            const uniqueId = 'msg-' + Date.now();
+            
+            messageDiv.className = `message ${sender}`;
+            messageDiv.id = uniqueId;
+            messageDiv.innerText = text;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll automatique vers le bas
+            
+            return uniqueId;
+        }
+
+        // Mettre à jour un message existant (pour enlever le "En train de réfléchir...")
+        function updateBotMessage(id, newText) {
+            const messageDiv = document.getElementById(id);
+            if (messageDiv) {
+                messageDiv.innerText = newText;
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>
